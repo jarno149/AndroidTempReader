@@ -1,4 +1,4 @@
-package fi.dy.maja.harkkatesti;
+package fi.dy.maja.androidtempreader;
 
 import org.junit.Test;
 
