@@ -37,7 +37,7 @@ public class MainWindow extends AppCompatActivity {
                 return true;
 
             case R.id.close:
-
+                    finish();
                 return true;
             default:
                 return true;

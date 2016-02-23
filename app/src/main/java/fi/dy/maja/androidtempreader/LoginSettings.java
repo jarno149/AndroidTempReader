@@ -52,7 +52,7 @@ public class LoginSettings extends AppCompatActivity {
         editor.putString("domain", domain);
         editor.commit();
 
-        Toast toast = Toast.makeText(getApplicationContext(), "Tiedot tallennettu", Toast.LENGTH_LONG);
+        Toast.makeText(getApplicationContext(), "Tiedot tallennettu", Toast.LENGTH_LONG).show();
     }
 
 }
