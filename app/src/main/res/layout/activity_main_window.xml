@@ -9,9 +9,10 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="fi.dy.maja.androidtempreader.MainWindow">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!"
-        android:id="@+id/text"/>
+    <ListView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/list"
+        android:textAlignment="center">
+    </ListView>
 </RelativeLayout>

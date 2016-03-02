@@ -2,17 +2,27 @@ package fi.dy.maja.androidtempreader;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import java.net.InetAddress;
+import java.net.URL;
+import java.net.UnknownHostException;
 
 public class LoginSettings extends AppCompatActivity {
 
     private EditText username;
     private EditText passwd;
     private EditText domain;
+
+    private static String Username;
+    private static String Password;
+    private static String Domain;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -32,7 +42,8 @@ public class LoginSettings extends AppCompatActivity {
     // Luetaan jo mahdollisesti olemassaolevat tiedot
     private void CheckSettingsIfExists()
     {
-        SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainWindow.context);
+        //SharedPreferences sharedPreferences = getPreferences(MainWindow.context);
         this.username.setText(sharedPreferences.getString("username", ""));
         this.passwd.setText(sharedPreferences.getString("passwd", ""));
         this.domain.setText(sharedPreferences.getString("domain", ""));
@@ -40,15 +51,25 @@ public class LoginSettings extends AppCompatActivity {
 
     public void saveSettings(View view)
     {
+
         String username = this.username.getText().toString();
         String passwd = this.passwd.getText().toString();
         String domain = this.domain.getText().toString();
 
+
         // Tallennetaan tieto talteen
-        SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainWindow.context);
+        //SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString("username", username);
         editor.putString("passwd", passwd);
+
+        if(!domain.startsWith("http://"))
+        {
+            domain = "http://" + domain;
+            this.domain.setText(domain);
+        }
+
         editor.putString("domain", domain);
         editor.commit();
 
