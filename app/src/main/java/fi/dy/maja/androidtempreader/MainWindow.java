@@ -1,10 +1,12 @@
 package fi.dy.maja.androidtempreader;
 
 import android.app.ListActivity;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -12,9 +14,12 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -24,17 +29,21 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.URL;
+import java.net.UnknownHostException;
+import java.util.Collections;
+import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 public class MainWindow extends AppCompatActivity
 {
-    public ListView dateList;
-    public static SharedPreferences preferences;
-    public static boolean DataIsSet = false;
+    public static ListView dateList;
+    public static DateListObject[] dateListObjects;
 
     public static Context context;
 
@@ -44,55 +53,182 @@ public class MainWindow extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_window);
 
-        // Alustetaan luokan property context
+        // Alustetaan luokan staattiset muuttujat
         context = this;
-
-        //setListAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, asd));
 
         // Alustetaan luokan listview olio.
         dateList = (ListView)findViewById(R.id.list);
+        dateList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id)
+            {
+                if(dateListObjects.length > position)
+                {
+                    Intent LinechartActivity = new Intent(MainWindow.context, TemperatureChart.class);
+                    LinechartActivity.putExtra("dateString", dateListObjects[position].dateString);
+                    startActivity(LinechartActivity);
+                }
+            }
+        });
 
-        // Haetaan mittauspäivien suurpiirteiset tiedot
-        try
-        {
-            String data = new GetMeasurementDates().execute("function=listdates").get();
-            SetDataToList(data);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-
+        // Päivitetään lista
+        new POSTRequestAsync().execute();
     }
 
-    // Asetetaan mittauspäivien tiedot pääikkunan listaan
-    public void SetDataToList(String data)
+    @Override
+    public void onResume()
     {
-        // Tarkistetaan että listassa on jotain
-        if(data != null && data != "")
+        super.onResume();
+        // Päivitetään lista
+        new POSTRequestAsync().execute();
+    }
+
+    public class POSTRequestAsync extends AsyncTask<Void, Void, DateListObject[]>
+    {
+        private ProgressDialog progressDialog;
+
+        protected void onPreExecute()
         {
-            String[] dateMeasurements;
+            SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(MainWindow.context);
+            this.progressDialog = new ProgressDialog(MainWindow.context);
+            this.progressDialog.setTitle("Ladataan");
+            this.progressDialog.setCancelable(false);
+            this.progressDialog.setMessage("Ladataan dataa palvelimelta:\n" + pref.getString("domain", ""));
+            this.progressDialog.show();
+        }
+
+        protected void onPostExecute(DateListObject[] objects)
+        {
+            this.progressDialog.dismiss();
+
+            // Asetetaan saatu data pääikkunan listviewiin
+            if(objects != null)
+            {
+                // Järjestetään lista ja tallennetaan se pääikkunan staattiseen muuttujaan talteen
+                for (int i = 0; i < objects.length; i++)
+                {
+                    for (int j = 0; j < objects.length; j++)
+                    {
+                        if(objects[i].date.compareTo(objects[j].date) >= 0)
+                        {
+                            DateListObject o = objects[i];
+                            objects[i] = objects[j];
+                            objects[j] = o;
+                        }
+                    }
+                }
+
+                MainWindow.dateListObjects = objects;
+                MainWindow.dateList.setAdapter(new DateList(MainWindow.context, objects));
+
+            }
+            else
+            {
+                // Näytetään virhe
+                // TODO
+            }
+        }
+
+        protected DateListObject[] doInBackground(Void... a)
+        {
+            // Avataan preference ja luetaan sinne asetettu tieto yhdistämistä varten
+            SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(MainWindow.context);
+            String username = pref.getString("username", "");
+            String password = pref.getString("passwd", "");
+            String domain = pref.getString("domain", "");
+
+            // Tarkistetaan että asetukset on asetettu
+            if((username == null || username == "") || (password == null || password == "") || (domain == null || domain == ""))
+            {
+                return null;
+            }
+
+            // Kootaan kysely asetuksiin määritellyillä tunnuksilla
+            String ipaddress = "";
             try
             {
-                // Parsitaan JSON-dataa tekstistä
-                JSONArray jsonArray = new JSONArray(data);
-                dateMeasurements = new String[jsonArray.length()];
-                for (int i = 0; i < jsonArray.length(); i++)
-                {
-                    JSONObject jobj = jsonArray.getJSONObject(i);
-                    double out = jobj.getDouble("outavg");
-                    double in = jobj.getDouble("inavg");
-                    dateMeasurements[i] = jobj.getString("date") + "#Out: " + String.format("%.2f", out) + "\u2103" + "#In: " + String.format("%.2f", in) + "\u2103";
-                }
-                this.dateList.setAdapter(new testi(this, dateMeasurements));
+                String q = "username=" + username + "&password=" + password + "&function=listdates";
+                DateListObject[] data = SendQuery(domain, q);
+
+                return data;
             }
-            catch (JSONException e)
+            catch (Exception e)
             {
                 e.printStackTrace();
             }
+            return null;
+        }
+
+        // Lähetetään POST-kysely palvelimelle
+        private DateListObject[] SendQuery(String Url, String params) throws IOException
+        {
+            String urlString = "";
+            try
+            {
+                // Parsitaan saatu osoite IP-osoitteeksi
+                String[] UrlSplitted = Url.split("//")[1].split("/");
+                urlString = "http://" + InetAddress.getByName(UrlSplitted[0]).toString().split("/")[1];
+                for (int i = 1; i < UrlSplitted.length; i++)
+                {
+                    urlString += "/" + UrlSplitted[i];
+                }
+                urlString += "/";
+            }
+            catch (UnknownHostException e)
+            {
+                e.printStackTrace();
+                return null;
+            }
+
+            // Tarkistetaan että osoite saatiin väännettyä ip-muotoon (Dynaamisten uudelleenohjauspalveluiden vuoksi)
+            if(urlString != "")
+            {
+                // Avataan yhteys ja asetetaan yhteys kirjoitustilaan
+                URL url = new URL(urlString);
+                HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+                conn.setDoOutput(true);
+
+                // Lähetetään POST-kysely palvelimelle
+                PrintWriter out = new PrintWriter(conn.getOutputStream());
+                out.print(params);
+                out.close();
+
+                // Luetaan vastaus palvelimelta
+                String response = "";
+                Scanner inStream = new Scanner(conn.getInputStream());
+                while(inStream.hasNextLine())
+                {
+                    response += (inStream.nextLine());
+                }
+                inStream.close();
+
+                if(response != "" && response != null)
+                {
+                    DateListObject[] dateListObjects;
+                    try
+                    {
+                        JSONArray jsonArray = new JSONArray(response);
+                        dateListObjects = new DateListObject[jsonArray.length()];
+
+                        // Parsitaan JSON-dataa
+                        for (int i = 0; i < jsonArray.length(); i++)
+                        {
+                            JSONObject jsobj = jsonArray.getJSONObject(i);
+                            String date = jsobj.getString("date");
+                            String inavg = jsobj.getString("inavg");
+                            String outavg = jsobj.getString("outavg");
+                            DateListObject dateObj = new DateListObject(date, inavg, outavg);
+                            dateListObjects[i] = dateObj;
+                        }
+                        // Palautetaan taulukko kutsujalle
+                        return dateListObjects;
+                    }
+                    catch (JSONException e) {e.printStackTrace();}
+                }
+            }
+            return null;
         }
     }
-
 
     // Asetetaan menun sisältö xml-tiedostossa määritellyksi
     @Override
@@ -114,6 +250,10 @@ public class MainWindow extends AppCompatActivity
                 showLoginsettingsActivity();
                 return true;
 
+            case R.id.update:
+                    // Päivitetään lista pääikkunaan
+                    new POSTRequestAsync().execute();
+                return true;
             case R.id.close:
                     finish();
                 return true;

@@ -4,6 +4,9 @@
         android:id="@+id/loginsettings"
         android:title="Kirjautumistunnukset" />
     <item
+        android:id="@+id/update"
+        android:title="Päivitä"/>
+    <item
         android:id="@+id/close"
         android:title="Sulje" />
 </menu>

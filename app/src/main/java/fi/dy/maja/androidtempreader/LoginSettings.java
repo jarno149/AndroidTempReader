@@ -13,6 +13,8 @@ import android.widget.Toast;
 import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 public class LoginSettings extends AppCompatActivity {
 
@@ -62,7 +64,7 @@ public class LoginSettings extends AppCompatActivity {
         //SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString("username", username);
-        editor.putString("passwd", passwd);
+        editor.putString("passwd", SHA1(passwd));
 
         if(!domain.startsWith("http://"))
         {
@@ -76,4 +78,21 @@ public class LoginSettings extends AppCompatActivity {
         Toast.makeText(getApplicationContext(), "Tiedot tallennettu", Toast.LENGTH_LONG).show();
     }
 
+    private String SHA1(String string)
+    {
+        try
+        {
+            MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
+            messageDigest.update(string.getBytes("UTF-8"));
+            byte[] bytes = messageDigest.digest();
+            StringBuilder buffer = new StringBuilder();
+            for (byte b: bytes)
+            {
+                buffer.append(Integer.toString((b & 0xff) + 0x100, 16).substring(1));
+            }
+            return buffer.toString();
+        }
+        catch (Exception e) {e.printStackTrace();}
+        return null;
+    }
 }

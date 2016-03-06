@@ -11,12 +11,12 @@ import android.widget.TextView;
 /**
  * Created by Jarno on 1.3.2016.
  */
-public class testi extends ArrayAdapter<String>
+public class DateList extends ArrayAdapter<DateListObject>
 {
     private final Context context;
-    private final String[] values;
+    private final DateListObject[] values;
 
-    public testi(Context context, String[] values)
+    public DateList(Context context, DateListObject[] values)
     {
         super(context, -1, values);
         this.context = context;
@@ -27,18 +27,18 @@ public class testi extends ArrayAdapter<String>
     public View getView(int position, View convertView, ViewGroup parent)
     {
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        View rowView = inflater.inflate(R.layout.testi, parent, false);
+        View rowView = inflater.inflate(R.layout.mylistlayout, parent, false);
 
-        TextView dateLine = (TextView)rowView.findViewById(R.id.firstLine);
-        TextView secLeft = (TextView) rowView.findViewById(R.id.secondLeft);
-        TextView secRight = (TextView) rowView.findViewById(R.id.secondRight);
+        TextView dateLine = (TextView)rowView.findViewById(R.id.date);
+        TextView outTemp = (TextView) rowView.findViewById(R.id.outTemp);
+        TextView inTemp = (TextView) rowView.findViewById(R.id.inTemp);
 
-        String[] data = values[position].split("#");
-
-        dateLine.setText(data[0]);
-        secLeft.setText(data[1]);
-        secRight.setText(data[2]);
+        dateLine.setText(values[position].getDate());
+        outTemp.setText(values[position].getOutAvg());
+        inTemp.setText(values[position].getInAvg());
 
         return rowView;
     }
+
+
 }
