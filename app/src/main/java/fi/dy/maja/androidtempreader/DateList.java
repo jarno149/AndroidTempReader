@@ -26,18 +26,18 @@ public class DateList extends ArrayAdapter<DateListObject>
     @Override
     public View getView(int position, View convertView, ViewGroup parent)
     {
-        LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        View rowView = inflater.inflate(R.layout.mylistlayout, parent, false);
+            LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+            View rowView = inflater.inflate(R.layout.mylistlayout, parent, false);
 
-        TextView dateLine = (TextView)rowView.findViewById(R.id.date);
-        TextView outTemp = (TextView) rowView.findViewById(R.id.outTemp);
-        TextView inTemp = (TextView) rowView.findViewById(R.id.inTemp);
+            TextView dateLine = (TextView) rowView.findViewById(R.id.date);
+            TextView outTemp = (TextView) rowView.findViewById(R.id.outTemp);
+            TextView inTemp = (TextView) rowView.findViewById(R.id.inTemp);
 
-        dateLine.setText(values[position].getDate());
-        outTemp.setText(values[position].getOutAvg());
-        inTemp.setText(values[position].getInAvg());
+            dateLine.setText(values[position].getDate());
+            outTemp.setText(values[position].getOutAvg());
+            inTemp.setText(values[position].getInAvg());
 
-        return rowView;
+            return rowView;
     }
 
 

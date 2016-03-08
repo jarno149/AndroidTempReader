@@ -11,6 +11,7 @@ import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -20,6 +21,7 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -60,19 +62,20 @@ public class MainWindow extends AppCompatActivity
         dateList = (ListView)findViewById(R.id.list);
         dateList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id)
-            {
-                if(dateListObjects.length > position)
-                {
-                    Intent LinechartActivity = new Intent(MainWindow.context, TemperatureChart.class);
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                if (dateListObjects.length > position) {
+                    Intent LinechartActivity = new Intent(getApplicationContext(), TemperatureChart.class);
                     LinechartActivity.putExtra("dateString", dateListObjects[position].dateString);
                     startActivity(LinechartActivity);
                 }
             }
         });
 
-        // Päivitetään lista
-        new POSTRequestAsync().execute();
+        if(savedInstanceState != null)
+        {
+            // Päivitetään lista
+            new POSTRequestAsync().execute();
+        }
     }
 
     @Override
@@ -86,11 +89,12 @@ public class MainWindow extends AppCompatActivity
     public class POSTRequestAsync extends AsyncTask<Void, Void, DateListObject[]>
     {
         private ProgressDialog progressDialog;
+        private Boolean ConnectionOK = false;
 
         protected void onPreExecute()
         {
             SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(MainWindow.context);
-            this.progressDialog = new ProgressDialog(MainWindow.context);
+            this.progressDialog = new ProgressDialog(context);
             this.progressDialog.setTitle("Ladataan");
             this.progressDialog.setCancelable(false);
             this.progressDialog.setMessage("Ladataan dataa palvelimelta:\n" + pref.getString("domain", ""));
@@ -124,8 +128,14 @@ public class MainWindow extends AppCompatActivity
             }
             else
             {
-                // Näytetään virhe
-                // TODO
+                if(this.ConnectionOK == true)
+                {
+                    Toast.makeText(MainWindow.context, "Käyttäjätunnus/salasana on väärä\ntai dataa ei ole saatavilla.", Toast.LENGTH_LONG).show();
+                }
+                else
+                {
+                    Toast.makeText(MainWindow.context, "Palvelimeen ei saatu yhteyttä.", Toast.LENGTH_LONG).show();
+                }
             }
         }
 
@@ -150,10 +160,12 @@ public class MainWindow extends AppCompatActivity
                 String q = "username=" + username + "&password=" + password + "&function=listdates";
                 DateListObject[] data = SendQuery(domain, q);
 
+                this.ConnectionOK = true;
                 return data;
             }
             catch (Exception e)
             {
+                this.ConnectionOK = false;
                 e.printStackTrace();
             }
             return null;

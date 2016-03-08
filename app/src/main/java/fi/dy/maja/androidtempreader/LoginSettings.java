@@ -47,7 +47,7 @@ public class LoginSettings extends AppCompatActivity {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainWindow.context);
         //SharedPreferences sharedPreferences = getPreferences(MainWindow.context);
         this.username.setText(sharedPreferences.getString("username", ""));
-        this.passwd.setText(sharedPreferences.getString("passwd", ""));
+        this.passwd.setText("");
         this.domain.setText(sharedPreferences.getString("domain", ""));
     }
 
@@ -58,24 +58,30 @@ public class LoginSettings extends AppCompatActivity {
         String passwd = this.passwd.getText().toString();
         String domain = this.domain.getText().toString();
 
-
-        // Tallennetaan tieto talteen
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainWindow.context);
-        //SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString("username", username);
-        editor.putString("passwd", SHA1(passwd));
-
-        if(!domain.startsWith("http://"))
+        if(username != "" && username != null && passwd != "" && passwd != null && domain != null && domain != "")
         {
-            domain = "http://" + domain;
-            this.domain.setText(domain);
+
+            // Tallennetaan tieto talteen
+            SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainWindow.context);
+            //SharedPreferences sharedPreferences = getPreferences(Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putString("username", username);
+            editor.putString("passwd", SHA1(passwd));
+
+            if (!domain.startsWith("http://")) {
+                domain = "http://" + domain;
+                this.domain.setText(domain);
+            }
+
+            editor.putString("domain", domain);
+            editor.commit();
+
+            Toast.makeText(getApplicationContext(), "Tiedot tallennettu", Toast.LENGTH_LONG).show();
         }
-
-        editor.putString("domain", domain);
-        editor.commit();
-
-        Toast.makeText(getApplicationContext(), "Tiedot tallennettu", Toast.LENGTH_LONG).show();
+        else
+        {
+            Toast.makeText(getApplicationContext(), "Anna kaikki tarvittavat tiedot", Toast.LENGTH_LONG).show();
+        }
     }
 
     private String SHA1(String string)

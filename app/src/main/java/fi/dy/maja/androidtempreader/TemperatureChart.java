@@ -1,6 +1,7 @@
 package fi.dy.maja.androidtempreader;
 
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.AsyncTask;
@@ -10,10 +11,18 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.widget.Toast;
 
+import com.github.mikephil.charting.animation.Easing;
 import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.components.Legend;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.formatter.ValueFormatter;
+import com.github.mikephil.charting.formatter.YAxisValueFormatter;
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
+import com.github.mikephil.charting.utils.ViewPortHandler;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -25,6 +34,7 @@ import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -33,18 +43,19 @@ public class TemperatureChart extends AppCompatActivity {
 
     private String dateString;
 
+    // Luodaan context objekti jotta voidaan piirtää latausikkuna tähän activityyn
+    private Context context;
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_line_chart);
 
-        if(savedInstanceState == null)
-        {
+        this.context = this;
             Bundle extras = getIntent().getExtras();
             if(extras != null)
             {
-
                 this.dateString = extras.getString("dateString");
                 new POSTRequestAsync().execute(this.dateString);
             }
@@ -53,7 +64,7 @@ public class TemperatureChart extends AppCompatActivity {
                 Toast.makeText(getApplicationContext() ,"Dataa ei löydy", Toast.LENGTH_LONG).show();
             }
         }
-    }
+
 
     // Haetaan data palvelimelta
     public class POSTRequestAsync extends AsyncTask<String, Void, MeasurementDate>
@@ -62,8 +73,9 @@ public class TemperatureChart extends AppCompatActivity {
 
         protected void onPreExecute()
         {
+            // Luetaan tallennettu palvelimen nimi ja näytetään käyttäjälle tieto että dataa haetaan palvelimelta
             SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(MainWindow.context);
-            this.progressDialog = new ProgressDialog(MainWindow.context);
+            this.progressDialog = new ProgressDialog(context);
             this.progressDialog.setTitle("Ladataan");
             this.progressDialog.setCancelable(false);
             this.progressDialog.setMessage("Ladataan dataa palvelimelta:\n" + pref.getString("domain", ""));
@@ -74,42 +86,73 @@ public class TemperatureChart extends AppCompatActivity {
         {
             this.progressDialog.dismiss();
 
-            // TODO PIIRRETÄÄN DATA IKKUNAAN!
+            // Luodaan uusi valueformatter
+            ValueFormatter formatter = new ValueFormatter() {
+                @Override
+                public String getFormattedValue(float value, Entry entry, int dataSetIndex, ViewPortHandler viewPortHandler) {
+                    return value + "\u2103";
+                }
+            };
+
+            // Luodaan uusi LineChart
             LineChart linechart = new LineChart(getBaseContext());
             setContentView(linechart);
 
-            // Dataaa
+            // Ulkolämpötilat
             ArrayList<Entry> outTemps = new ArrayList<>();
             for (int i = 0; i < md.outTemps.length; i++)
             {
                 outTemps.add(new Entry((float)md.outTemps[i].temperature, i));
             }
 
+            // Sisälämpötilat
             ArrayList<Entry> inTemps = new ArrayList<>();
             for (int i = 0; i < md.inTemps.length; i++)
             {
                 inTemps.add(new Entry((float)md.inTemps[i].temperature, i));
             }
 
-            ArrayList<LineDataSet> lines = new ArrayList<>();
-            LineDataSet lineDataSet = new LineDataSet(outTemps, "Ulkolämpötilat");
-            lineDataSet.setColor(Color.RED);
-            lineDataSet.setCircleColor(Color.RED);
-            lines.add(lineDataSet);
-            lines.add(new LineDataSet(inTemps, "Sisälämpötilat"));
+            // Luodaan interface lista dataseteistä
+            ArrayList<ILineDataSet> lines = new ArrayList<>();
+            // Luodaan ulkolämpötiloista LineDataSet-olio
+            LineDataSet OutDataset = new LineDataSet(outTemps, "Ulkolämpötilat");
+            OutDataset.setColor(Color.RED);
+            OutDataset.setCircleColor(Color.RED);
+            OutDataset.setValueFormatter(formatter);
+            OutDataset.setValueTextSize(8);
 
-            // X-akseli
+            LineDataSet inDataset = new LineDataSet(inTemps, "Sisälämpötilat");
+            inDataset.setColor(Color.GREEN);
+            inDataset.setCircleColor(Color.GREEN);
+            inDataset.setValueFormatter(formatter);
+            inDataset.setValueTextSize(8);
+
+            // Lisätään ulkolämpötilojen dataset listaan
+            lines.add(OutDataset);
+            // Lisätään sisälämpötilojen dataset listaan
+            lines.add(inDataset);
+
+            // Luodaan X-akselin labelit
             ArrayList<String> labels = new ArrayList<>();
             for (int i = 0; i < md.outTemps.length; i++)
             {
                 labels.add(md.outTemps[i].timeString);
             }
 
-            LineChart lineChart = new LineChart(getBaseContext());
-            setContentView(lineChart);
-            // TODO
-            //lineChart.setDa
+            // Asetetaan data Charttiin ja muutetaan sen asetuksia
+            LineData data = new LineData(labels, lines);
+            linechart.setData(data);
+            XAxis xAxis = linechart.getXAxis();
+            xAxis.setTextSize(20);
+            Legend legend = linechart.getLegend();
+            legend.setTextSize(15);
+            YAxis yAxis1 = linechart.getAxisLeft();
+            YAxis yAxis2 = linechart.getAxisRight();
+            yAxis1.setTextSize(15);
+            yAxis2.setTextSize(15);
 
+            // Animoidaan X-akselin datan piirto
+            linechart.animateX(1500);
         }
 
         protected MeasurementDate doInBackground(String... date)
@@ -211,9 +254,9 @@ public class TemperatureChart extends AppCompatActivity {
                         }
                         for (int i = 0; i < array2.length(); i++)
                         {
-                            String time = array1.getJSONObject(i).getString("time");
-                            double temperature = array1.getJSONObject(i).getDouble("temperature");
-                            String location = array1.getJSONObject(i).getString("location");
+                            String time = array2.getJSONObject(i).getString("time");
+                            double temperature = array2.getJSONObject(i).getDouble("temperature");
+                            String location = array2.getJSONObject(i).getString("location");
 
                             inTemps[i] = new Measurement(location, temperature, time);
                         }
